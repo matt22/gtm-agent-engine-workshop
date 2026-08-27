@@ -34,6 +34,14 @@ from . import data_service
 from .data_service import REP_IDS
 
 MODEL_NAME = "gpt-4o-mini"
+SENSITIVE_PROSPECT_FIELDS = {"billing_qualification"}
+
+
+def _public_prospect_fields(record, drop=()):
+    return {
+        key: value for key, value in record.items()
+        if key not in SENSITIVE_PROSPECT_FIELDS and key not in drop
+    }
 
 # ---------------------------------------------------------------------------
 # Tools
@@ -58,7 +66,7 @@ def build_prospect_profile(prospect_id: str) -> dict:
         return {"prospect_profile": None, "found": False}
     built = {
         "prospect_id": prospect_id,
-        **rec,
+        **_public_prospect_fields(rec),
         "engagement_history": data_service.fetch_engagement_history(prospect_id),
         "account_details": data_service.fetch_account_details(prospect_id),
         "tech_stack": data_service.fetch_tech_stack(prospect_id),
@@ -132,8 +140,9 @@ def get_prospect(prospect_id: str) -> dict:
     # caller can pull from build_prospect_profile instead.
     contact = {
         "prospect_id": prospect_id,
-        **{k: v for k, v in record.items()
-           if k not in ("engagement_history", "account_details", "tech_stack")},
+        **_public_prospect_fields(
+            record, drop=("engagement_history", "account_details", "tech_stack")
+        ),
     }
     return {"prospect": contact, "found": True}
 
